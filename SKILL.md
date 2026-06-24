@@ -10,7 +10,7 @@ trigger: /adaptive-learning
 
 **使用语言**：全程中文。每个 session 结尾加「喵」。
 
-**教学人格**：执行本 skill 时必须先读 `~/.claude/skills/adaptive-learning/roles/teacher.md`，按 v3.2 对话教学指南行事。核心原则：
+**教学人格**：执行本 skill 时必须先读 `<skill_root>/roles/teacher.md`，按 v3.2 对话教学指南行事。核心原则：
 - 目标是学会，不是解决问题
 - 教学有两种模式：阐述（exposition）和探索（exploration），不要混淆
 - 不要直接给答案、不要堆方案、不要急于推进
@@ -18,7 +18,12 @@ trigger: /adaptive-learning
 
 ## 环境配置
 
-skill 启动时**第一件事**是读 `~/.claude/skills/adaptive-learning/config.json`（或仓库根的 `config.json`）。文件不存在时提示用户从 `config.example.json` 拷贝并填入自己的路径。
+skill 启动时**第一件事**是读 `<skill_root>/config.json`。文件不存在时提示用户从 `config.example.json` 拷贝并填入自己的路径。
+
+`<skill_root>` 取决于你用的 agent 框架，常见位置：
+- Claude Code: `~/.claude/skills/adaptive-learning/`
+- OpenClaw: `~/.openclaw/workspace/skills/adaptive-learning/`
+- Hermes Agent: `~/.hermes/skills/adaptive-learning/`（或 `~/.hermes/skills/openclaw-imports/adaptive-learning/`）
 
 config 字段（见 `config.example.json` 完整说明）：
 - `vault_path`：Obsidian Vault 根目录。下文所有 `Vault/` 出现的位置都指它。
@@ -325,7 +330,7 @@ X 学完并验证理解 → 用户回到 T 这一层继续
 - 用具体例子贯穿始终
 - 关联段落用 2-3 句讲清关系内容
 - **必须包含可立即上手的实操内容**：命令、配置示例、调试方法、踩坑点
-- 详细参考 `~/.claude/skills/adaptive-learning/templates/knowledge-note-template.md`
+- 详细参考 `<skill_root>/templates/knowledge-note-template.md`
 
 ### 详细笔记（full）结构
 

@@ -1,14 +1,14 @@
 # adaptive-learning
 
-> 一个面向 [Claude Code](https://github.com/anthropics/claude-code) 的自适应学习 skill —— 把"想学 X"变成一条从资料搜集、理解验证到 Obsidian 知识网络的完整闭环。
+> 一个自适应学习 skill —— 把"想学 X"变成一条从资料搜集、理解验证到 Obsidian 知识网络的完整闭环。
 
-每个 session 结尾会加「喵」。
+支持 [Claude Code](https://github.com/anthropics/claude-code) / [OpenClaw](https://github.com/openclaw/openclaw) / [Hermes Agent](https://github.com/NousResearch/hermes-agent)（遵循 [agentskills.io](https://agentskills.io) 标准）。每个 session 结尾会加「喵」。
 
 ---
 
 ## 是什么
 
-`adaptive-learning` 是一个 Claude Code skill。当你说"我想搞懂 X"，它会：
+`adaptive-learning` 是一个 agent skill。当你说"我想搞懂 X"，它会：
 
 1. **分层前置**：找出理解 X 之前必须先懂的概念，按依赖关系分 2-4 层呈现
 2. **让你选**：每个前置概念你可以选 详细学 / 简略了解 / 跳过 / 已掌握
@@ -25,25 +25,27 @@
 
 ### 前置要求
 
+支持的 agent 框架（任选一个）：
 - [Claude Code](https://github.com/anthropics/claude-code) CLI
+- [OpenClaw](https://github.com/openclaw/openclaw)
+- [Hermes Agent](https://github.com/NousResearch/hermes-agent)（OpenClaw 的官方继任）
+
+笔记浏览：
 - [Obsidian](https://obsidian.md/)（用来浏览 Vault 和看 Graph View）
 
-### 安装步骤
+> **格式说明**：本 skill 遵循 [agentskills.io](https://agentskills.io) 的 `SKILL.md` 开放标准。同一份代码三个生态都能跑，只是安装路径和触发方式略有差异。
+
+### Claude Code 安装
 
 ```bash
-# 1. clone 到 ~/.claude/skills/
 mkdir -p ~/.claude/skills
 git clone https://github.com/Sheriaties/adaptive-learning-skill.git ~/.claude/skills/adaptive-learning
-
-# 2. 拷贝并填写 config
 cd ~/.claude/skills/adaptive-learning
 cp config.example.json config.json
-# 用编辑器打开 config.json，把 vault_path 改成你的 Obsidian Vault 路径
-
-# 3. 在 Claude Code 全局 CLAUDE.md 中注册触发器（可选但推荐）
+# 编辑 config.json 填入你的 Obsidian Vault 路径
 ```
 
-在 `~/.claude/CLAUDE.md` 加一段：
+在 `~/.claude/CLAUDE.md` 加一段触发器：
 
 ```markdown
 # adaptive-learning
@@ -51,6 +53,44 @@ cp config.example.json config.json
 When the user types `/adaptive-learning`, invoke the Skill tool with `skill: "adaptive-learning"` before doing anything else.
 Also invoke when user expresses learning intent with phrases like: 想深入学习、想搞懂、系统学习、学习...架构、想深度学、从零开始学。
 ```
+
+### OpenClaw 安装
+
+```bash
+mkdir -p ~/.openclaw/workspace/skills
+git clone https://github.com/Sheriaties/adaptive-learning-skill.git ~/.openclaw/workspace/skills/adaptive-learning
+cd ~/.openclaw/workspace/skills/adaptive-learning
+cp config.example.json config.json
+# 编辑 config.json 填入你的 Obsidian Vault 路径
+```
+
+OpenClaw 会自动发现 `workspace/skills/` 下的 SKILL.md。在对话里用 `/adaptive-learning` 触发，或直接说"我想学 X"，agent 会按 SKILL.md 的描述匹配触发。
+
+也可以从 [ClawHub](https://clawhub.ai)（OpenClaw 官方 skills registry）发布后供他人一键安装。
+
+### Hermes Agent 安装
+
+Hermes 兼容 OpenClaw skill 格式。两种安装方式：
+
+**A. 直接放进 Hermes skills 目录**：
+
+```bash
+mkdir -p ~/.hermes/skills
+git clone https://github.com/Sheriaties/adaptive-learning-skill.git ~/.hermes/skills/adaptive-learning
+cd ~/.hermes/skills/adaptive-learning
+cp config.example.json config.json
+```
+
+**B. 放进 openclaw-imports 子目录**（如果你已有 OpenClaw 习惯，统一管理）：
+
+```bash
+mkdir -p ~/.hermes/skills/openclaw-imports
+git clone https://github.com/Sheriaties/adaptive-learning-skill.git ~/.hermes/skills/openclaw-imports/adaptive-learning
+cd ~/.hermes/skills/openclaw-imports/adaptive-learning
+cp config.example.json config.json
+```
+
+在 Hermes 里用 `/skills` 命令查看已注册 skills；用 `/adaptive-learning` 触发，或表达学习意图自动触发。Hermes 还支持从 [agentskills.io](https://agentskills.io) 发现并安装。
 
 ---
 
