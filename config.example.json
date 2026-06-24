@@ -1,0 +1,18 @@
+{
+  "_comment": "拷贝本文件为 config.json，并改成你自己的路径。config.json 已在 .gitignore 中。",
+
+  "vault_path": "~/Documents/LearningVault/",
+  "_vault_path_hint": "Obsidian Vault 根目录。skill 会在此目录下创建 00_Sources/02_Unknown/03_Knowledge_Network/04_MOC/99_Templates 子目录。路径若含空格，所有 Bash 命令必须用双引号包裹。",
+
+  "user_profile_path": "~/.adaptive-learning/state/user_profile.json",
+  "_user_profile_hint": "长期学习画像文件。不存在时 skill 会创建。",
+
+  "session_state_path": "~/.adaptive-learning/state/current_session.json",
+  "_session_state_hint": "当前 session 的递归调用栈，用于断线恢复。",
+
+  "language": "zh-CN",
+  "_language_hint": "目前仅支持 zh-CN（中文）。",
+
+  "session_suffix": "喵",
+  "_session_suffix_hint": "每个 session 结尾追加的字符。设为空字符串可关闭。"
+}
