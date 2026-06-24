@@ -14,7 +14,7 @@
 2. **让你选**：每个前置概念你可以选 详细学 / 简略了解 / 跳过 / 已掌握
 3. **递归学习**："详细学"会把那个前置当成新目标重新走一遍流程，递到底再回来
 4. **理解验证**：先在对话里讲一遍，再开放答疑，最后小测——通过才算学会
-5. **写入 Obsidian**：验证通过的知识进 `03_Knowledge_Network/`，未验证的留在 `02_Unknown/`，资料原文留在 `00_Sources/`
+5. **写入 Obsidian**：所有概念笔记都写在 `03_Knowledge_Network/`，状态由 `understanding:` 字段 + tag 表达（黄=待验证、浅绿=简略、深绿=已掌握）。资料原文留在 `00_Sources/`。每个用户主动请求的学习根目标会自动生成一份 `04_MOC/` 学习地图，记录这次学习涉及哪些前置、各自状态。
 6. **图谱可视化**：通过 Obsidian Graph View 颜色（黄=待验证、浅绿=简略、深绿=已掌握）一眼看到学习状态
 
 核心价值不是"让 AI 帮你写笔记"，而是**防止"读了就以为懂了"的伪学习污染你的知识网络**。
@@ -112,9 +112,8 @@ skill 会按需在 `vault_path` 下创建：
 ```
 LearningVault/
   00_Sources/           ← 原始资料（联网模式）
-  02_Unknown/           ← 待确认理解（学习中间站）
-  03_Knowledge_Network/ ← 已验证知识（按 understanding level tag）
-  04_MOC/               ← Maps of Content
+  03_Knowledge_Network/ ← 全部概念笔记（按 understanding tag 区分黄/浅绿/深绿三态）
+  04_MOC/               ← 根目标 = MOC，主动请求学习的概念会自动生成学习地图
   99_Templates/         ← 笔记模板
 ```
 
@@ -128,6 +127,7 @@ LearningVault/
 | `tag:#understanding/brief` | `#5FF25F` 浅绿 | 简略了解 |
 | `tag:#pending-verify` | `#FFFF00` 黄色 | 待确认 |
 | `tag:#learning/root-request` | `#800080` 紫色 | 用户主动请求的根目标 |
+| `tag:#moc` | `#FFA500` 橙色 | 学习地图（MOC，导航笔记） |
 
 ---
 

@@ -41,11 +41,12 @@ config 字段（见 `config.example.json` 完整说明）：
 ```
 LearningVault/
   00_Sources/           ← 原始资料（联网模式）
-  02_Unknown/           ← 待确认理解（学习中间站）
-  03_Knowledge_Network/ ← 已验证知识（tagged by understanding level）
-  04_MOC/               ← Maps of Content
+  03_Knowledge_Network/ ← 全部概念笔记（按 understanding tag 区分黄/浅绿/深绿三态）
+  04_MOC/               ← 根目标 = MOC，由用户主动请求学习的根概念组成
   99_Templates/         ← 笔记模板
 ```
+
+**为什么没有 02_Unknown？** 概念的"已掌握 / 简略 / 待验证"状态由 `understanding:` 字段 + tag 表达，不再用文件夹位置重复表达一遍。所有概念笔记从生命周期一开始就写到 `03_Knowledge_Network/`，验证通过时**原地覆写** frontmatter 即可（Edit 工具改 `understanding:` + tag），不需要在目录间搬来搬去。
 
 ## Obsidian Graph 颜色说明
 
@@ -53,8 +54,9 @@ LearningVault/
 |------|-----|------|
 | 深绿 `#006400` | `#understanding/full` | 充分理解，经过完整学习验证 |
 | 浅绿 `#5FF25F` | `#understanding/brief` | 简略了解，知道是什么但没深入 |
-| 黄色 `#FFFF00` | `#pending-verify` | 待确认，在 02_Unknown 中 |
+| 黄色 `#FFFF00` | `#pending-verify` | 待确认，正文已写但未通过理解验证 |
 | 紫色 `#800080` | `#learning/root-request` | 用户主动请求学习的根目标 |
+| 橙色 `#FFA500` | `#moc` | 学习地图（MOC），由根目标自动生成 |
 
 ---
 
@@ -68,7 +70,7 @@ LearningVault/
 
 ```
 用户想学 X
-  ├─ X 是公开通用知识且 ≤2025？ → 不联网，直接写总结进 02_Unknown
+  ├─ X 是公开通用知识且 ≤2025？ → 不联网，直接写总结进 03_Knowledge_Network（带 pending-verify）
   ├─ X 是专有名词？ → 联网：WebSearch + WebFetch
   └─ 模型对 X 无法明确回答？ → 联网
 ```
@@ -80,8 +82,48 @@ LearningVault/
 ### 1.1 读用户状态
 用 Read 工具读取 `<user_profile_path>`（来自 config），提取 `understanding: full/brief` 的概念集合。文件不存在则视为"无已知知识"。
 
-### 1.2 澄清学习目标
-确认用户想学什么、为什么。判断是否为"用户主动请求的根目标"（是则后续加 `#learning/root-request` tag）。
+### 1.2 澄清学习目标 + 创建 MOC（如果是根目标）
+确认用户想学什么、为什么。判断是否为"用户主动请求的根目标"。
+
+**根目标 = MOC**：如果是根目标，**立刻**在 `04_MOC/` 创建一个 MOC 笔记（同时给概念加 `#learning/root-request` tag）。MOC 是这次学习的"主题地图"，记录这个根目标下都学了哪些前置、各自处于什么状态。
+
+写入前查重：先 `ls 04_MOC/ | grep -i "<concept>"`。已存在则覆写或追加（用户选）。
+
+MOC 模板：
+
+```markdown
+---
+title: [根目标名称] MOC
+aliases: []
+tags: [moc, learning/root-request, 概念标签]
+date_started: [YYYY-MM-DD]
+related:
+  - "[[根目标名称]]"   # 指向根目标本身的概念笔记
+---
+
+# [根目标名称] 学习地图
+
+> 本 MOC 由 adaptive-learning skill 自动维护。每完成一个前置的学习状态变化（新增 / 转绿 / 转 brief），下方对应分组会被更新。
+
+## 学习目标
+[1-2 句话：为什么要学这个 / 学到什么程度算够]
+
+## 学习路径（按依赖层级，从底层到目标）
+
+### 层级 N（底层）
+（待 Step 1.4 用户做完选择后由 Step 1.5 自动填充）
+
+### 层级 1（紧邻目标）
+（待填充）
+
+## 状态汇总
+- ⏳ 待学习（pending-verify）：0
+- 🟢 简略了解（brief）：0
+- 🌳 充分理解（full）：0
+- ⏭️ 跳过：0
+```
+
+**注意**：递归学习时（Step 4.5 把前置 X 当作新根目标），X **不**加 `#learning/root-request` tag，也**不**为 X 单独创建 MOC——只有最外层的用户主动请求才是 MOC 入口。这避免了递归 5 层后产生 5 个 MOC。
 
 ### 1.3 前置知识分层
 分析目标概念的前置依赖，按"离目标的远近"分 2-4 层：
@@ -142,6 +184,15 @@ related:
 
 写完后立刻向用户口头确认："已在 03_Knowledge_Network/ 为以下概念创建占位笔记 + 与 [上层目标] 双向链接（Graph View 黄色节点带边）：[列表]"。
 
+**c) 同步更新 MOC**：找到当前学习栈最外层根目标对应的 `04_MOC/<根目标> MOC.md`，用 Edit 工具：
+- 在对应"层级 N"段落 append 这一批新前置（格式 `- ⏳ [[X]]`）
+- "状态汇总"段的 `pending-verify` 计数 +N
+- "跳过"项也单列在"层级"内（格式 `- ⏭️ [[Y]] — 跳过`），便于回看完整决策记录
+
+后续状态变化（Step 4.5 brief 转浅绿、Step 6 转深绿、Step 5.3 阻塞）都要同步 Edit MOC：
+- 把 `⏳ [[X]]` 改成 `🟢 [[X]]` 或 `🌳 [[X]]`
+- 状态汇总三个计数对应增减
+
 ### 1.6 层级递进
 - 用户"全部掌握"且状态确认已掌握 → 跳过该层，直接进入目标概念
 - 用户在该层选了学习项 → 学完后继续往下一层
@@ -190,7 +241,7 @@ tags: [source, 概念标签]
 - **不要把跳过/未学的前置当作已讲过**：用户没选学的概念，正文里出现时只能用 `[[wikilink]]` 指过去，不能展开讲。
 - 拿不准就标 `（不确定）` 或 `（待查证）`，比编造好十倍。
 
-**非联网模式**：直接在 `02_Unknown/` 创建待确认笔记：
+**非联网模式**：直接在 `03_Knowledge_Network/` 创建待确认笔记（如果 Step 1.5 已建占位，则 Edit 在原文件上扩写正文部分，frontmatter 不动）：
 
 ```markdown
 ---
@@ -199,6 +250,8 @@ aliases: []  # 中英文别名、缩写、常见误写
 understanding: none
 date_added: [YYYY-MM-DD]
 tags: [pending-verify, 概念标签]
+related:
+  - "[[上层目标]]"
 ---
 
 ## 什么是 [概念名称]
@@ -215,7 +268,9 @@ tags: [pending-verify, 概念标签]
 用户对以上理解是否充分？→ Step 5
 ```
 
-**联网模式**：综合多篇资料，在 `02_Unknown/` 创建综合笔记（同上模板，加 `sources:` 字段）。
+**联网模式**：综合多篇资料，同样写入 `03_Knowledge_Network/`（同上模板，加 `sources:` 字段）。
+
+**关键**：所有未验证笔记都先以 `understanding: none` + `pending-verify` 黄色 tag 出现在 `03_Knowledge_Network/`，验证通过后由 Step 6 **原地** Edit frontmatter（不创建新文件、不移动文件）。
 
 ---
 
@@ -269,7 +324,7 @@ X 学完并验证理解 → 用户回到 T 这一层继续
 
 ### Step 5.1：在对话窗口里完整讲一遍
 
-**禁止**：把笔记写完就丢一句"读一下 02_Unknown/X.md 然后告诉我懂没懂"——这是发讲义不是上课。
+**禁止**：把笔记写完就丢一句"读一下笔记然后告诉我懂没懂"——这是发讲义不是上课。
 
 **必做**：在对话窗口里**口语化、有节奏地把概念再讲一遍**：
 - 用提问引入（"你想过为什么 X 不能直接 Y 吗？"）
@@ -313,16 +368,23 @@ X 学完并验证理解 → 用户回到 T 这一层继续
 - **不会答** → 笔记的对应章节再讲一遍，回到 5.2
 
 通过 → 迁入 `03_Knowledge_Network/`（Step 6）
-未通过且多次纠正后仍不会 → 更新 `02_Unknown/` 笔记，标记阻塞点，提供 Step 4.5 的两个选项
+未通过且多次纠正后仍不会 → 在该笔记尾部追加"## 阻塞点"段落，保持 `pending-verify` tag，提供 Step 4.5 的两个选项
 
 ---
 
-## Step 6: 写入知识网络
+## Step 6: 转绿（原地 Edit frontmatter）
 
-用户确认理解后，将笔记写入 `03_Knowledge_Network/`（Write 工具）。
-如果 Step 1.5 已创建占位笔记，**覆写**，不是新建。
+用户在 Step 5.3 小测通过 → **不创建新文件，不移动文件**，用 Edit 工具改这一篇 `03_Knowledge_Network/` 笔记的 frontmatter：
 
-**写入前查重**：若 Step 1.5 未创建占位（例如简略了解直接走到这步），先用 Bash `ls 03_Knowledge_Network/ | grep -i "<concept>"` 检查是否已有同名或近似名笔记。若存在，问用户：覆写 / 重命名 / 并入已有笔记（把别名写入 `aliases:` 字段）。
+- `understanding: none` → `understanding: full`（或 `brief`）
+- `tags: [pending-verify, ...]` → `tags: [understanding/full, ...]`（或 `understanding/brief`）
+- 加 `date_learned: [YYYY-MM-DD]` 字段
+
+如果是 full 路径，正文也要按"详细笔记结构"扩写（见下文模板）。如果是 brief，正文用"简略笔记结构"。Step 1.5 已有的占位 body（"⏳ 待学习"段、"简略说明（占位，后续覆盖）"段）整段替换。
+
+**写入前查重**：若该概念在 Step 1.5 没创建过占位（极少见，例如直接走简略路径且跳过了占位步骤），先用 Bash `ls 03_Knowledge_Network/ | grep -i "<concept>"` 检查是否已有同名或近似名笔记。若存在，问用户：覆写 / 重命名 / 并入已有笔记（把别名写入 `aliases:` 字段）。
+
+**同步 MOC**：转绿后同步更新当前学习栈最外层根目标对应的 `04_MOC/` 笔记——把 `⏳ [[X]]` 改成 `🟢 [[X]]`（brief）或 `🌳 [[X]]`（full），状态汇总计数对应调整。
 
 笔记写作要求（**概念 + 实操，两手都要**）：
 - 教科书式展开，不是速查卡
@@ -455,7 +517,7 @@ find "<vault_path>" -name "*.md" -empty -delete
 ## 常见陷阱
 
 1. 看到用户在学某个工具/框架的架构，就跳过本 skill → **不对**，工具架构同样走本流程
-2. 联网搜到资料就直接写入 `03_Knowledge_Network/` → **不对**，必须先过 `02_Unknown/` 验证理解
+2. 联网搜到资料就直接标 `understanding: full` → **不对**，必须先以 `understanding: none + pending-verify` 写入 03_Knowledge_Network，通过理解验证后才转绿（Step 6 原地 Edit）
 3. 占位笔记（有 frontmatter + `#pending-verify`）当空文件删除 → **不对**，有内容的占位笔记要保留
 4. `related:` 字段跨层链接 → 相邻层级才能双链，跨层用 `**概念名** — 解释` 格式
 5. 用户选"详细学"前置 X，就直接生成 X 的笔记 → **绝对不对**。详细 = 把 X 当成新根目标重新走 Step 0，继续追溯 X 的前置。只有递归到底（没有任何前置选"详细"）才生成内容。见 Step 4.5。
