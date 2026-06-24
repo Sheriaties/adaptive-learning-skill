@@ -37,68 +37,79 @@
 
 ### 两种安装方式
 
-**方式 A：命令行下载**（适合习惯命令行的用户）。
+**方式 A：命令行一键装**（推荐）。一条命令完成 clone + 触发器注册（如适用），全程无需手贴任何文件：
 
-**方式 B：对话内下载**（适合不想敲命令的用户，让 agent 帮你做）——把下面这段话发给你的 agent，它会自动 clone 仓库并启动 onboarding：
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sheriaties/adaptive-learning-skill/main/install.sh | bash
+```
+
+脚本会自动检测你装的是 Claude Code / OpenClaw / Hermes 中的哪一个，clone 到对应的 skills 目录。如果同时装了多个，按 `Hermes > OpenClaw > Claude Code` 优先级；想强制选一个：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Sheriaties/adaptive-learning-skill/main/install.sh | bash -s -- --target=claude
+# --target 可选值: claude / openclaw / hermes
+```
+
+**方式 B：对话内安装**（适合不想敲命令的用户，让 agent 帮你做）——把下面这段话发给你的 agent，它会自动 clone 仓库并启动 onboarding：
 
 > 帮我安装 adaptive-learning skill：
 > 1. 检测我用的是 Claude Code / OpenClaw / Hermes 中的哪一个
 > 2. 把 https://github.com/Sheriaties/adaptive-learning-skill.git clone 到对应的 skills 目录
-> 3. clone 完成后立刻读 SKILL.md 里的 "Step -1: Onboarding 对话" 段落，按那个脚本问我配置问题，最后生成 config.json + 创建 Vault 目录结构
+> 3. 如果是 Claude Code，把 SKILL.md 顶部的 `# adaptive-learning skill` 触发器段追加到 ~/.claude/CLAUDE.md（先 grep 查重避免重复）
+> 4. 完成后立刻读 SKILL.md 里的 "Step -1: Onboarding 对话" 段落，按那个脚本问我配置问题，最后生成 config.json + 创建 Vault 目录结构
 
 > 三个生态对应的 skill 安装路径：
 > - Claude Code → ~/.claude/skills/adaptive-learning/
 > - OpenClaw → ~/.openclaw/workspace/skills/adaptive-learning/
 > - Hermes Agent → ~/.hermes/skills/adaptive-learning/
 
-**两种方式装完后都一样**：第一次说「我想学 X」时，agent 会先跑 onboarding 对话问你 3 个问题（Vault 路径、状态目录、session 尾巴字符），然后自动创建配置文件和 Vault 目录。**你不需要手写任何 JSON**。
+**两种方式装完后都一样**：第一次说「我想学 X」时，agent 会先跑 onboarding 对话问你 3 个问题（Vault 路径、状态目录、session 尾巴字符），然后自动创建配置文件和 Vault 目录。**全程不需要手写任何 JSON 或粘贴任何配置。**
 
 ---
 
-### 方式 A 命令行：Claude Code
+### 高级：手动安装（不想用脚本）
+
+如果你不想跑 install.sh，下面是各生态的手动 clone 命令。
+
+#### Claude Code
 
 ```bash
 mkdir -p ~/.claude/skills
 git clone https://github.com/Sheriaties/adaptive-learning-skill.git ~/.claude/skills/adaptive-learning
 ```
 
-在 `~/.claude/CLAUDE.md` 加一段触发器：
+并在 `~/.claude/CLAUDE.md` 追加触发器（install.sh 自动做的就是这一步）：
 
 ```markdown
-# adaptive-learning
-- **adaptive-learning** (`~/.claude/skills/adaptive-learning/SKILL.md`) - 自适应学习工作流。Trigger: `/adaptive-learning`
+# adaptive-learning skill
+- **adaptive-learning** (`~/.claude/skills/adaptive-learning/SKILL.md`) - 自适应学习工作流，资料搜集→理解验证→Obsidian 知识整合。Trigger: `/adaptive-learning`
 When the user types `/adaptive-learning`, invoke the Skill tool with `skill: "adaptive-learning"` before doing anything else.
 Also invoke when user expresses learning intent with phrases like: 想深入学习、想搞懂、系统学习、学习...架构、想深度学、从零开始学。
 ```
 
 然后在 Claude Code 里直接说「我想学 X」即可触发 onboarding。
 
-### 方式 A 命令行：OpenClaw
+#### OpenClaw
 
 ```bash
 mkdir -p ~/.openclaw/workspace/skills
 git clone https://github.com/Sheriaties/adaptive-learning-skill.git ~/.openclaw/workspace/skills/adaptive-learning
 ```
 
-OpenClaw 会自动发现 `workspace/skills/` 下的 SKILL.md。在对话里用 `/adaptive-learning` 触发，或直接说"我想学 X"，agent 会按 SKILL.md 的描述匹配触发并跑 onboarding。
+OpenClaw 会自动发现 `workspace/skills/` 下的 SKILL.md，无需手动注册。在对话里用 `/adaptive-learning` 触发，或直接说"我想学 X"。
 
 也可以从 [ClawHub](https://clawhub.ai)（OpenClaw 官方 skills registry）发布后供他人一键安装。
 
-### 方式 A 命令行：Hermes Agent
-
-Hermes 兼容 OpenClaw skill 格式。两种放置位置都可以：
+#### Hermes Agent
 
 ```bash
-# 推荐：直接放进 Hermes skills 目录
 mkdir -p ~/.hermes/skills
 git clone https://github.com/Sheriaties/adaptive-learning-skill.git ~/.hermes/skills/adaptive-learning
-
-# 或：放进 openclaw-imports 子目录（如果你已有 OpenClaw 习惯，统一管理）
-mkdir -p ~/.hermes/skills/openclaw-imports
-git clone https://github.com/Sheriaties/adaptive-learning-skill.git ~/.hermes/skills/openclaw-imports/adaptive-learning
 ```
 
-在 Hermes 里用 `/skills` 命令查看已注册 skills；用 `/adaptive-learning` 触发或表达学习意图自动触发，会先跑 onboarding。Hermes 还支持从 [agentskills.io](https://agentskills.io) 发现并安装。
+或放进 `~/.hermes/skills/openclaw-imports/`（如你已有 OpenClaw 习惯，统一管理）。
+
+在 Hermes 里用 `/skills` 命令查看已注册 skills；用 `/adaptive-learning` 触发或表达学习意图自动触发。Hermes 还支持从 [agentskills.io](https://agentskills.io) 发现并安装。
 
 ---
 
