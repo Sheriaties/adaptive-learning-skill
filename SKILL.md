@@ -18,23 +18,90 @@ trigger: /adaptive-learning
 
 ## 环境配置
 
-skill 启动时**第一件事**是读 `<skill_root>/config.json`。文件不存在时提示用户从 `config.example.json` 拷贝并填入自己的路径。
+skill 启动时**第一件事**：检查 `<skill_root>/config.json` 是否存在。
+
+- **不存在** → 进入 **Step -1: Onboarding 对话**（见下文），由 agent 引导用户生成 config.json + 创建 Vault 目录结构。
+- **存在** → 读取后直接进入 Step 0。
 
 `<skill_root>` 取决于你用的 agent 框架，常见位置：
 - Claude Code: `~/.claude/skills/adaptive-learning/`
 - OpenClaw: `~/.openclaw/workspace/skills/adaptive-learning/`
 - Hermes Agent: `~/.hermes/skills/adaptive-learning/`（或 `~/.hermes/skills/openclaw-imports/adaptive-learning/`）
 
-config 字段（见 `config.example.json` 完整说明）：
-- `vault_path`：Obsidian Vault 根目录。下文所有 `Vault/` 出现的位置都指它。
-- `user_profile_path`：长期学习画像 JSON。
-- `session_state_path`：当前 session 递归栈 JSON（断线恢复用）。
+config.json 字段：
+- `vault_path`：Obsidian Vault 根目录。
+- `state_dir`：学习状态目录，存放 `user_profile.json` 和 `current_session.json`。**默认相对当前项目 cwd**（`./.adaptive-learning/`），让每个项目维护自己的学习状态。绝对路径也可。
 - `session_suffix`：每个 session 结尾追加的字符（默认 `喵`，设为 `""` 可关闭）。
 
 **Bash 注意**：vault_path 若含空格（如 iCloud 同步路径），所有 Bash 命令必须用双引号包裹路径。
 
 - **模板文件**：`<skill_root>/templates/knowledge-note-template.md`
 - **参考范文**：`<skill_root>/references/` 目录
+
+---
+
+## Step -1: Onboarding 对话（首次启动 / config.json 不存在时）
+
+agent 在对话窗口里**主动**问用户三个问题，每问一个等用户回复，最后一次性 Write `<skill_root>/config.json` + 创建 Vault 目录结构。
+
+**对话脚本**（agent 严格按这个开场白和顺序，**不要**改写问题或合并问题）：
+
+```
+你好！这是 adaptive-learning skill 的首次启动配置，我会问你 3 个问题，
+完成后你就可以直接说"我想学 X"开始学习。
+
+问题 1/3：你的 Obsidian Vault 在哪？
+（默认 ~/Documents/LearningVault/，回车采用默认；也可以填绝对路径）
+```
+
+收到回答 → 解析路径，处理 `~` 和相对路径。继续：
+
+```
+问题 2/3：学习状态文件（user_profile.json + current_session.json）放哪？
+（默认 ./.adaptive-learning/，相对当前 cwd；也可以填绝对路径）
+
+提示：默认值会让每个项目维护自己的学习状态，跨项目不会互相污染。
+建议把 .adaptive-learning/ 加到项目 .gitignore，避免学习记录进 git。
+```
+
+收到回答 → 继续：
+
+```
+问题 3/3：每个 session 结尾的小尾巴字符？
+（默认「喵」，可以改成别的，留空表示不要）
+```
+
+收到回答 → 立刻执行：
+
+1. **Write** `<skill_root>/config.json`（用三个回答）
+2. **Bash** 创建 Vault 目录结构：
+   ```bash
+   mkdir -p "<vault_path>/00_Sources" \
+            "<vault_path>/03_Knowledge_Network" \
+            "<vault_path>/04_MOC" \
+            "<vault_path>/99_Templates"
+   ```
+3. **Bash** 创建 state_dir：
+   ```bash
+   mkdir -p "<state_dir>"
+   ```
+4. **Bash** 把笔记模板拷到 Vault（让用户在 Obsidian 里能看到模板）：
+   ```bash
+   cp "<skill_root>/templates/knowledge-note-template.md" "<vault_path>/99_Templates/"
+   ```
+5. 向用户口头确认：
+
+```
+配置完成！
+- Vault: <vault_path>（已创建 00_Sources / 03_Knowledge_Network / 04_MOC / 99_Templates）
+- 状态目录: <state_dir>
+- session 尾巴: <session_suffix 或"已关闭">
+
+接下来：在 Obsidian 里打开这个 Vault，按 README 配置 Graph View 颜色（或随时让我帮你解释怎么配）。
+现在告诉我你想学什么，我们开始吧。
+```
+
+**onboarding 完成后**，**不要**继续走 Step 0 学习流程——等用户**重新**说"我想学 X"再开始。理由：onboarding 是配置流程，和学习意图是两件事，混在一起容易让用户困惑。
 
 ## Vault 目录结构
 
@@ -80,7 +147,7 @@ LearningVault/
 ## Step 1: 初始化
 
 ### 1.1 读用户状态
-用 Read 工具读取 `<user_profile_path>`（来自 config），提取 `understanding: full/brief` 的概念集合。文件不存在则视为"无已知知识"。
+用 Read 工具读取 `<state_dir>/user_profile.json`（state_dir 来自 config），提取 `understanding: full/brief` 的概念集合。文件不存在则视为"无已知知识"。
 
 ### 1.2 澄清学习目标 + 创建 MOC（如果是根目标）
 确认用户想学什么、为什么。判断是否为"用户主动请求的根目标"。
@@ -498,7 +565,7 @@ related:
 
 ## Step 7: 更新用户状态
 
-用 Write/Edit 工具更新 `<user_profile_path>`（来自 config）：
+用 Write/Edit 工具更新 `<state_dir>/user_profile.json`：
 - 在 `learning_history` 追加本次学习记录
 - 更新 `knowledge_network_size`（+1 per full/brief note）
 - 更新 `current_focus` 和 `next_learning_goals`
